@@ -1,7 +1,5 @@
 # Advanced Lane Finding Project
 
----
-
 [//]: # (Image References)
 
 [birds_eye_view_1]: ./output_images/birds_eye_view_1.png "Warp Example"
@@ -152,6 +150,7 @@ The following images demonstrate the distortion correction to a test chessboard 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
 Correctly identifying lane line pixels is the most important step of this project where the rest of the pipelines rely on. In order to identify lane line, I used a combination of color and gradient thresholds to generate a binary image which is encapsulated in `BinaryMasking` class (lines 123 - 202). This is divided into two major components:
+
 1. Colour binary masking
     - `colour_filter_y_channel` - Color thresholding in Y component of YUV colour space.
     - `colour_filter_v_channel` - Color thresholding in V component of YUV colour space.
