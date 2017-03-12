@@ -43,14 +43,15 @@
 [video_challenge2]: ./annotated_project_video.wimp4 "Challenge Video 2"
 [overview]: ./output_images/overview.gif "Overview"
 
-## Overview
+Overview
+---
 
 Lane finding is one of the important steps for required autonomous driving robots. The algorithm must be robust to changing lighting and weather conditions, curvature and texture of the road. The objective of this project is to identify lane lines using traditional computer vision techniques. Initially camera calibration is done to correct for camera distortion, the video frame is then warped to Bird Eye's view by perspective transformation and this is followed by Colour and Sobel Edge binary masking. The position of the lane lines are estimated by histogram and windowing technique to find base position of the lanes and a second degree polymonial fit computed which form lane lines. Finally, an inverse perspective transformation is applied in the end and the resulting output of the pipleine is an annotated video consisting of highlighted lane line, radius from the centre and offset information.
 
 ![alt text][overview]
 
-
-## Project Goals
+Project Goals
+---
 
 * Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
 * Apply a distortion correction to raw images.
@@ -61,9 +62,8 @@ Lane finding is one of the important steps for required autonomous driving robot
 * Warp the detected lane boundaries back onto the original image.
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
+Run Instructions
 ---
-
-## Run Instructions 
 
 The project is written in python and utilises numpy, OpenCV, scikit learn and MoviePy.
 
@@ -86,9 +86,8 @@ source activate carnd-term1
 python lanelines.py -i project_video.mp4 -o annotated_project_video.mp4
 ```
 
+Project Structure
 ---
-
-## Project Structure
 
 ### Source Code
 The code is divided up into several files which are imported by model.py and main.py.
@@ -99,7 +98,6 @@ The code is divided up into several files which are imported by model.py and mai
 * `lane_lib/perspective.py` - Consists of `PerspectiveTransform` class which computes the perspective transformation matrix `M` and its inverse `Minv` to warp road images in bird's eye view. This makes it easier to compute the lane curvature which is crucial for this project.
 * `lane_lib/debug.py` - Some plotting functions to assist during debugging the project code.
 
-
 ### Miscellaneous Files
 * `AdvancedLaneLines.ipynb` - Jupyter notebook for generating various stages of the project to assist during this writeup. Images produced from this notebook can also be found at output_images/*.png
 * `Writeup.ipynb` - Jupyter notebook used to construct this writeup. It has the same content as `README.md`.
@@ -108,10 +106,8 @@ The code is divided up into several files which are imported by model.py and mai
 * `annotated_project_video_1.mp4` - The output of the vehicle detection project when processing against challenge_video.mp4 video. 
 * `annotated_project_video_2.mp4` - The output of the vehicle detection project when processing against harder_challenge_video.mp4 video. 
 
+Computer Vision Pipeline
 ---
-
-
-## Computer Vision Pipeline
 
 ### Camera Calibration
 
@@ -140,7 +136,7 @@ The following images demonstrate the distortion correction to a test chessboard 
 
 ![alt text][undistort2]
 
-#### Binary Masking
+### Binary Masking
 
 Correctly identifying lane line pixels is the most important step of this project where the rest of the pipelines rely on. In order to identify lane line, I used a combination of color and gradient thresholds to generate a binary image which is encapsulated in `BinaryMasking` class `(lines 123 - 202)`. This is divided into two major components:
 
@@ -172,8 +168,7 @@ Here's are examples that illustrate the individual steps of binary masking step.
 
 ![masking_sobel]
 
-
-#### Perspective Transformation
+### Perspective Transformation (Warp to Bird's Eye View)
 
 Perspective transformation is used to warp the camera image to a Bird's Eye View perspective. This makes it easier to compute the curvature of the lane lines as the both the lines are parallel to each other. Here, I define the source region of interest polygon that constitute the road region within the vanishing point experimentally and the destination rectangle that image should be warped into bird's eye view. Using `cv2.getPerspectiveTransform(src, dst)` OpenCV function, I can compute the perspective transformation matrix `M` and its inverse `Minv`.
 
@@ -217,11 +212,11 @@ I verified that my perspective transform was working as expected by drawing the 
 
 In `LaneLineDetector` class, lines 34-35 in `draw` method uses `cv2.warpPerspective` OpenCV function to do the actual transformation given the `M` matrix computed as explained above.
 
-#### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+### Identification and Tracking of Lane Line positions
 
-After binary masking and perspective tranformation steps, next is to compute lanes for the first frame. 
+After binary masking and perspective tranformation steps, next is to identify lane-line pixels and fit their positions with a polynomial. The base lane-line positions are initialised for the first video frame and the lane-line positions of subsequent frames are updated by searching within a predefined margin only which increases the efficiency of the algorithm. 
 
-**init() method: Compute base positions by computing histogram and windowing and fit lane lines**
+#### init() method: Compute base positions by computing histogram and windowing and fit lane lines
 
 In `LaneLineDetector` class, lines 40-45 in `draw` method, the `initialised` flag is used to call `init` method first which initialises the base position of left and right lane lines. For this, I computed a histogram of pixel occurances in x-direction and split from the centre position to find the left and right peaks of the histogram. These peaks are stored for use as the initial base position. The following figure shows the histogram computation for the given binary masked image.
 
@@ -231,7 +226,7 @@ I used vertically stacked windows to divide the image height into eight parts. T
 
 After we have x positions for each window, I used `np.polyfit` numpy function to fit a second degree polynomial line for each of the lane lines. I have used safety checks in the code to ensure there are no empty pixels in the image after binary thresholding. Otherwise, the frame is rejected. 
 
-**update() method: Faster search around precomputed base positions to fit lane lines**
+#### update() method: Faster search around precomputed base positions to fit lane lines
 
 When the next video frame comes, the `initialised` flag will direct to `update` method instead. This step will salvage the base x positions computed in the `init` method which was  computationally expensive due to histogramming and windowing. It will limit the `polyfit` points search to a small margin around the base positions which will be a lot faster. If this frame does not have any points to fit, it will terminate the update and unset the `initialised` flag so that we recompute the histogram and windows again. 
 
@@ -240,22 +235,21 @@ The following figure illustrates the whole process. It contains the eight search
 ![alt text][windowing_and_fit]
 
 
-#### Calculation of Radius of Curvature of the lane and Position of vehicle with respect to center
+### Calculation of Radius of Curvature of the lane and Position of vehicle from center
 
-The lane curvature is calculated in the `lane_curvature` method in `LaneLinesDetector` class which is in the `lane_lib/detector.py` file (lines 75-102). This is called at the end of `draw` method to annotate the final output lane line image with the following information.
+This step discusses the calculation of radius of curvature of the lane and the position of the vehicle with respect to center. The lane curvature is calculated in the `lane_curvature` method in `LaneLinesDetector` class which is in the `lane_lib/detector.py` file (lines 75-102). This is called at the end of `draw` method to annotate the final output lane line image with the following information.
 * Offset from centre: The offset of the vehicle from the center of the lane in metres.
 * Direction of offset: This is measured by the sign of the offset.
 * Radius of Curvature: The deviation of the vehicle off from the center of the road lane in metres. This is the average of curvatures of the left and right lane lines. 
 
-#### Inverse Perspective Transformation
+### Inverse Perspective Transformation (Unwarp)
 
 I implemented this step in lines 68 in my code in `detector.py` in the method `draw()` of `LaneLinesDetector` class. It uses `cv2.wrapPerspective` OpenCV function and inverse perspective transformation matrix `Minv` computed earlier to plot back down onto the road such that the lane area is highlighted clearly. Here is an example of my result on a test image:
 
 ![alt text][compare_test3]
 
+Project Video
 ---
-
-### Project Video
 
 The success criteria for this project was that wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road. My detection pipeline performs reasonably well on the entire project video. 
 
@@ -265,11 +259,10 @@ The success criteria for this project was that wobbly lines are ok but no catast
 * Here are links to the [challenge video result](./annotated_project_video_1.mp4) and [harder challenge video result](./annotated_project_video_2.mp4) which did not generalise so well as the first one. 
 * **Update:** This project has been integrated into [Vehicle Detection and Tracking project](https://github.com/sagunms/CarND-Vehicle-Detection).
 
+Discussion
 ---
 
-### Discussion
-
-#### Issues and limitations
+### Issues and limitations
 
 Advanced Lane Lines project took a very a large amount of time compared to other projects related to self-driving car. The hyper-parameter tuning process for Binary Masking in my computer vision pipeline was extremely tedious and time-consuming. 
 
@@ -277,7 +270,7 @@ My pipeline works quite well in the main project video. The challenge video also
 
 This project let me to appreciate the modern deep learning approaches even more. Deep learning approach avoid the need for fine-tuning these parameters as it can learn the optimum colour space itself with the training examples given and are inherently more robust. 
 
-#### Future Improvments
+### Future Improvments
 
 For extensions and future directions, I would like to highlight following points.
 
