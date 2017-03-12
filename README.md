@@ -1,4 +1,5 @@
 # Advanced Lane Finding Project
+[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
 [//]: # (Image References)
 
@@ -87,7 +88,7 @@ python lanelines.py -i project_video.mp4 -o annotated_project_video.mp4
 
 ---
 
-## Project structure
+## Project Structure
 
 ### Source Code
 The code is divided up into several files which are imported by model.py and main.py.
@@ -110,16 +111,11 @@ The code is divided up into several files which are imported by model.py and mai
 ---
 
 
-## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
-Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
-
----
+## Computer Vision Pipeline
 
 ### Camera Calibration
 
-#### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
-
-The camera calibration logic is encapsulated in `CameraCalibrate` class in the `lanelines.py` file. This class's constructor takes following arguments.
+Here I will briefly discuss how I computed the camera matrix and distortion coefficients. The camera calibration logic is encapsulated in `CameraCalibrate` class in the `lanelines.py` file. This class's constructor takes following arguments.
 
 1. The glob path to the camera images (chessboard pattern) which we are going to use for camera calibration. 
 2. The shape of the corners in (X direction, Y direction)
@@ -139,17 +135,14 @@ I then used the output `obj_points` and `img_points` to compute the camera calib
 
 ![alt text][undistort1]
 
-
-### Pipeline (single images)
-
-#### 1. Provide an example of a distortion-corrected image.
+### Distortion-correction
 The following images demonstrate the distortion correction to a test chessboard image. The difference images helps gauge the amount of correction made to the initial image.
 
 ![alt text][undistort2]
 
-#### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+#### Binary Masking
 
-Correctly identifying lane line pixels is the most important step of this project where the rest of the pipelines rely on. In order to identify lane line, I used a combination of color and gradient thresholds to generate a binary image which is encapsulated in `BinaryMasking` class (lines 123 - 202). This is divided into two major components:
+Correctly identifying lane line pixels is the most important step of this project where the rest of the pipelines rely on. In order to identify lane line, I used a combination of color and gradient thresholds to generate a binary image which is encapsulated in `BinaryMasking` class `(lines 123 - 202)`. This is divided into two major components:
 
 1. Colour binary masking
     - `colour_filter_y_channel` - Color thresholding in Y component of YUV colour space.
@@ -159,12 +152,11 @@ Correctly identifying lane line pixels is the most important step of this projec
     - `sobel_gradient_magnitude` - Sobel gradient magnitude
     - `sobel_gradient_direction` - Sobel gradient direction
 
-Here is an example YUV channels the a test RGB image:
+I used YUV colour space for colour binary masking. The Y component determines the brightness of the color (luminance or luma), while the U and V components determine the color itself (the chroma). Here is an example YUV channels the a test RGB image:
 
 ![yuv_colour]
 
-
-These individual masking operations are logically combined into final mask using the following technique in the constructor of `BinaryMasking` class:
+Through trial-and-error, threshold values for various masking parameters were hardcoded in the `BinaryMasking` class. These individual masking operations are logically combined into final mask using the following technique in the constructor of same class:
 
 ```python
 # Combined masking
@@ -172,7 +164,7 @@ mask = np.zeros_like(img_d_mag)
 mask[((img_masked_y_channel == 1) | (img_masked_v_channel == 1)) & (img_abs_x == 1) | 
       ((img_g_mag == 1) & (img_d_mag == 1))] = 1
 ```
-Here's an example of my output for this step.
+Here's are examples that illustrate the individual steps of binary masking step.
 
 ![masking_colour]
 
@@ -181,7 +173,9 @@ Here's an example of my output for this step.
 ![masking_sobel]
 
 
-#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
+#### Perspective Transformation
+
+Perspective transformation is used to warp the camera image to a Bird's Eye View perspective. This makes it easier to compute the curvature of the lane lines as the both the lines are parallel to each other. Here, I define the source region of interest polygon that constitute the road region within the vanishing point experimentally and the destination rectangle that image should be warped into bird's eye view. Using `cv2.getPerspectiveTransform(src, dst)` OpenCV function, I can compute the perspective transformation matrix `M` and its inverse `Minv`.
 
 The code for my perspective transform is initialised in the class `PerspectiveTransform` int the `lane_lib/perspective.py` file. This computes the transformation matrix `M` and its inverse `Minv` in this constructor.  The constructor takes the image size tuple `img_size` and computes the relative source and destination points dynamically in the following manner:
 
@@ -227,7 +221,7 @@ In `LaneLineDetector` class, lines 34-35 in `draw` method uses `cv2.warpPerspect
 
 After binary masking and perspective tranformation steps, next is to compute lanes for the first frame. 
 
-**Init method: Compute base positions by computing histogram and windowing and fit lane lines**
+**init() method: Compute base positions by computing histogram and windowing and fit lane lines**
 
 In `LaneLineDetector` class, lines 40-45 in `draw` method, the `initialised` flag is used to call `init` method first which initialises the base position of left and right lane lines. For this, I computed a histogram of pixel occurances in x-direction and split from the centre position to find the left and right peaks of the histogram. These peaks are stored for use as the initial base position. The following figure shows the histogram computation for the given binary masked image.
 
@@ -237,7 +231,7 @@ I used vertically stacked windows to divide the image height into eight parts. T
 
 After we have x positions for each window, I used `np.polyfit` numpy function to fit a second degree polynomial line for each of the lane lines. I have used safety checks in the code to ensure there are no empty pixels in the image after binary thresholding. Otherwise, the frame is rejected. 
 
-**Update method: Faster search around precomputed base positions to fit lane lines**
+**update() method: Faster search around precomputed base positions to fit lane lines**
 
 When the next video frame comes, the `initialised` flag will direct to `update` method instead. This step will salvage the base x positions computed in the `init` method which was  computationally expensive due to histogramming and windowing. It will limit the `polyfit` points search to a small margin around the base positions which will be a lot faster. If this frame does not have any points to fit, it will terminate the update and unset the `initialised` flag so that we recompute the histogram and windows again. 
 
@@ -246,41 +240,44 @@ The following figure illustrates the whole process. It contains the eight search
 ![alt text][windowing_and_fit]
 
 
-#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+#### Calculation of Radius of Curvature of the lane and Position of vehicle with respect to center
 
 The lane curvature is calculated in the `lane_curvature` method in `LaneLinesDetector` class which is in the `lane_lib/detector.py` file (lines 75-102). This is called at the end of `draw` method to annotate the final output lane line image with the following information.
 * Offset from centre: The offset of the vehicle from the center of the lane in metres.
 * Direction of offset: This is measured by the sign of the offset.
 * Radius of Curvature: The deviation of the vehicle off from the center of the road lane in metres. This is the average of curvatures of the left and right lane lines. 
 
-#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+#### Inverse Perspective Transformation
 
-I implemented this step in lines 68 in my code in `detector.py` in the method `draw()` of `LaneLinesDetector` class. It uses `cv2.wrapPerspective` OpenCV function and inverse perspective transformation matrix `Minv` computed earlier to plot back down onto the road such that the lane area is highlighted. Here is an example of my result on a test image:
+I implemented this step in lines 68 in my code in `detector.py` in the method `draw()` of `LaneLinesDetector` class. It uses `cv2.wrapPerspective` OpenCV function and inverse perspective transformation matrix `Minv` computed earlier to plot back down onto the road such that the lane area is highlighted clearly. Here is an example of my result on a test image:
 
 ![alt text][compare_test3]
 
 ---
 
-### Pipeline (video)
+### Project Video
 
-#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+The success criteria for this project was that wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road. My detection pipeline performs reasonably well on the entire project video. 
 
 ![alt text][overview]
 
 * Here is a [link to my main project video result](./annotated_project_video.mp4).
 * Here are links to the [challenge video result](./annotated_project_video_1.mp4) and [harder challenge video result](./annotated_project_video_2.mp4) which did not generalise so well as the first one. 
+* **Update:** This project has been integrated into [Vehicle Detection and Tracking project](https://github.com/sagunms/CarND-Vehicle-Detection).
 
 ---
 
 ### Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+#### Issues and limitations
 
-Advanced Lane Lines project took a very a large amount of time compared to all other projects. The hyper-parameter tuning process for Binary Masking in my computer vision pipeline was extremely tedious and time-consuming. 
+Advanced Lane Lines project took a very a large amount of time compared to other projects related to self-driving car. The hyper-parameter tuning process for Binary Masking in my computer vision pipeline was extremely tedious and time-consuming. 
 
 My pipeline works quite well in the main project video. The challenge video also works fairly well but, except at one instance under the overhead bridge, the lane lines are completely are lost but quickly recovers. My algorithm is unable to generalize across all the different road conditions, especially demonstrated by the harder challenge video which failed miserably. This shows that traditional computer vision is extremely sensitive to the tuned parameters which needs to be chosen very carefully with no guarantee it would work for a slightly different scenario, let alone an unstructured environment. Therefore, it seems is not a good approach for developing the entirety of the computer vision pipleline for self-driving cars.
 
-From all the frustration, this project let me to appreciate the modern deep learning approaches even more. Deep learning approach avoid the need for fine-tuning these parameters as it can learn the optimum colour space itself with the training examples given and are inherently more robust. 
+This project let me to appreciate the modern deep learning approaches even more. Deep learning approach avoid the need for fine-tuning these parameters as it can learn the optimum colour space itself with the training examples given and are inherently more robust. 
+
+#### Future Improvments
 
 For extensions and future directions, I would like to highlight following points.
 
