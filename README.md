@@ -1,4 +1,4 @@
-# Advanced Lane Finding Project
+# Advanced Lane Finding and Tracking
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
 [//]: # (Image References)
@@ -67,7 +67,7 @@ Run Instructions
 
 The project is written in python and utilises numpy, OpenCV, scikit learn and MoviePy.
 
-Here are the steps required to generate the model from scratch and run the project for vehicle tracking. 
+Here are the steps required to generate the model from scratch and run the project for lane lines detection and tracking. 
 
 #### Clone my project
 ```bash
@@ -81,7 +81,7 @@ Follow instructions from [CarND-Term1-Starter-Kit page](https://github.com/udaci
 source activate carnd-term1
 ```
 
-#### Run vehicle detection project (output video)
+#### Run lane lines finding project (output video)
 ```bash
 python lanelines.py -i project_video.mp4 -o annotated_project_video.mp4
 ```
@@ -102,9 +102,9 @@ The code is divided up into several files which are imported by model.py and mai
 * `AdvancedLaneLines.ipynb` - Jupyter notebook for generating various stages of the project to assist during this writeup. Images produced from this notebook can also be found at output_images/*.png
 * `Writeup.ipynb` - Jupyter notebook used to construct this writeup. It has the same content as `README.md`.
 * `calib.p` - Pickle file containing instrinc camera calibration matrix and distortion coefficient saved as the outcome of `CameraCalibrate` class used during the initialisation of the lane detection pipeline.
-* `annotated_project_video.mp4` - The output of the Advanced lane finding project when processing against project_video.mp4 video.
-* `annotated_project_video_1.mp4` - The output of the vehicle detection project when processing against challenge_video.mp4 video. 
-* `annotated_project_video_2.mp4` - The output of the vehicle detection project when processing against harder_challenge_video.mp4 video. 
+* `annotated_project_video.mp4` - The output of the Advanced lane Finding project when processing against project_video.mp4 video.
+* `annotated_project_video_1.mp4` - The output of the project when processing against challenge_video.mp4 video. 
+* `annotated_project_video_2.mp4` - The output of the project when processing against harder_challenge_video.mp4 video. 
 
 Computer Vision Pipeline
 ---
